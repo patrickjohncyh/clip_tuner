@@ -48,7 +48,7 @@ class CLIPTuner:
                                     eps=hyper_params["eps"],
                                     weight_decay=hyper_params["weight_decay"])
 
-    def tuner(self, train_dataframe, validation_dataframe, batch_size=4, epochs=5, evaluation_steps=500):
+    def tuner(self, train_dataframe, validation_dataframe, batch_size=4, epochs=5, evaluation_steps=500, **kwargs):
         train_dataset = ImageCaptioningDataset(train_dataframe, self.preprocess)
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
@@ -69,7 +69,7 @@ class CLIPTuner:
 
                     images = list_image
                     images = images.to(self.device)
-                    texts = clip.tokenize(list_txt).to(self.device)
+                    texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False)).to(self.device)
 
                     logits_per_image, logits_per_text = self.model(images, texts)
 
