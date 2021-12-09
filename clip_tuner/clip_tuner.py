@@ -17,7 +17,7 @@ def convert_models_to_fp32(model):
 
 class CLIPTuner:
 
-    def __init__(self, lr=5e-5, betas=(0.9, 0.98), eps=1e-6, weight_decay=0.2, comet_tracking=None, **kwargs):
+    def __init__(self, lr=5e-5, betas=(0.9, 0.98), eps=1e-6, weight_decay=0.2, temperature=1.0, comet_tracking=None, **kwargs):
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device,
                                                 jit=False)  # Must set jit=False for training
@@ -35,8 +35,10 @@ class CLIPTuner:
             "lr": lr,
             "betas": betas,
             "eps": eps,
-            "weight_decay": weight_decay
+            "weight_decay": weight_decay,
+            "temperature": temperature
         }
+        self.temperature = temperature
 
         self.experiment.log_parameters(hyper_params)
 
@@ -75,8 +77,8 @@ class CLIPTuner:
 
                     ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
-                    total_loss = (self.loss_img(logits_per_image, ground_truth) + self.loss_txt(logits_per_text,
-                                                                                                ground_truth)) / 2
+                    total_loss = (self.temperature*self.loss_img(logits_per_image, ground_truth) +
+                                  self.temperature*self.loss_txt(logits_per_text, ground_truth)) / 2
                     self.experiment.log_metric("loss", total_loss.item(), step=step)
                     step = step + 1
 
