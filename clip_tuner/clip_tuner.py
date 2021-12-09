@@ -89,26 +89,26 @@ class CLIPTuner:
                         clip.model.convert_weights(self.model)
                     pbar.update(1)
 
-                if step % evaluation_steps == 0:
+                    if step % evaluation_steps == 0:
 
-                    for batch in validation_dataloader:
-                        pbar.set_description("Currently Validating")
+                        for batch in validation_dataloader:
+                            pbar.set_description("Currently Validating")
 
-                        with torch.no_grad():
+                            with torch.no_grad():
 
-                            list_image, list_txt = batch
+                                list_image, list_txt = batch
 
-                            images = list_image
-                            images = images.to(self.device)
-                            texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False)).to(self.device)
+                                images = list_image
+                                images = images.to(self.device)
+                                texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False)).to(self.device)
 
-                            logits_per_image, logits_per_text = self.model(images, texts)
+                                logits_per_image, logits_per_text = self.model(images, texts)
 
-                            ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
+                                ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
 
-                            total_loss = (self.loss_img(logits_per_image, ground_truth) +
-                                          self.loss_txt(logits_per_text, ground_truth)) / 2
+                                total_loss = (self.loss_img(logits_per_image, ground_truth) +
+                                              self.loss_txt(logits_per_text, ground_truth)) / 2
 
-                            self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
+                                self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
 
                 pbar.close()
