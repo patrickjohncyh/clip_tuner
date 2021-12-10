@@ -66,8 +66,10 @@ class CLIPTuner:
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
         validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size)
-
         step = 0
+        eval_step = 0
+        state_dicts = {}
+
         with self.experiment.train():
             for epoch in range(epochs):
                 pbar = tqdm.tqdm(position=0, total=len(train_dataloader))
@@ -97,4 +99,14 @@ class CLIPTuner:
                                 list_image, list_txt = batch
                                 total_loss = self.forward_pass(list_image, list_txt, kwargs)
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
+
+                        # store state_dict as cpu
+                        state_dicts[eval_step] = {
+                            'validation_loss': total_loss.item(),
+                            'state_dict': {k: v.cpu() for k, v in self.model.state_dict()}
+                        }
+
+                        eval_step+=1
                 pbar.close()
+
+        return state_dicts
