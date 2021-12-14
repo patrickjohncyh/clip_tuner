@@ -78,7 +78,7 @@ class CLIPTuner:
                     self.optimizer.zero_grad()
 
                     list_image, list_txt = batch
-                    total_loss = self.forward_pass(list_image, list_txt, kwargs)
+                    total_loss = self.forward_pass(list_image, list_txt, **kwargs)
 
                     self.experiment.log_metric("loss", total_loss.item(), step=step)
                     step = step + 1
@@ -97,7 +97,7 @@ class CLIPTuner:
                             pbar.set_description("Currently Validating")
                             with torch.no_grad():
                                 list_image, list_txt = batch
-                                total_loss = self.forward_pass(list_image, list_txt, kwargs)
+                                total_loss = self.forward_pass(list_image, list_txt, **kwargs)
                                 self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
 
                         # store state_dict as cpu
