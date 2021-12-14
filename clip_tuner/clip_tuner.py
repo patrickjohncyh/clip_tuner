@@ -103,7 +103,7 @@ class CLIPTuner:
                         # store state_dict as cpu
                         state_dicts[eval_step] = {
                             'validation_loss': total_loss.item(),
-                            'state_dict': {k: v.cpu() for k, v in self.model.state_dict()}
+                            'state_dict': {k: v.cpu() for k, v in self.model.state_dict().items()}
                         }
 
                         eval_step+=1
