@@ -4,3 +4,4 @@ ftfy
 regex
 tqdm
 comet_ml==3.20.0
+torch_optimizer
