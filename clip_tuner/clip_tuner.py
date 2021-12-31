@@ -48,7 +48,8 @@ class CLIPTuner:
             "betas": betas,
             "eps": eps,
             "weight_decay": weight_decay,
-            "temperature": temperature
+            "temperature": temperature,
+            "optimizer": optimizer
         }
         self.temperature = temperature
 
