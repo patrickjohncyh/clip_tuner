@@ -8,7 +8,7 @@ import tqdm
 import torch
 from clip_tuner.dataset import ImageCaptioningDataset
 from torch.utils.data import DataLoader
-
+import gc
 
 def convert_models_to_fp32(model):
     for p in model.parameters():
@@ -136,5 +136,15 @@ class CLIPTuner:
 
                         eval_step+=1
                 pbar.close()
+
+        # just keep the best 3 due to OOM issues
+        steps_sorted_by_val_loss = sorted(self.state_dicts, key=lambda k: self.state_dicts[k]['validation_loss'])
+        for k in steps_sorted_by_val_loss:
+            if k not in steps_sorted_by_val_loss[:3]:
+                del self.state_dicts[k]
+                # ensure mem is freed
+                gc.collect()
+
+
 
         return state_dicts
