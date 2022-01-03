@@ -9,6 +9,7 @@ import torch
 from clip_tuner.dataset import ImageCaptioningDataset
 from torch.utils.data import DataLoader
 import gc
+import numpy as np
 
 def convert_models_to_fp32(model):
     for p in model.parameters():
@@ -92,8 +93,8 @@ class CLIPTuner:
     def tuner(self, train_dataframe, validation_dataframe, batch_size=4, epochs=5, evaluation_steps=500, **kwargs):
         train_dataset = ImageCaptioningDataset(train_dataframe, self.preprocess)
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
-        validation_dataloader = DataLoader(validation_dataset, batch_size=batch_size)
+        train_dataloader = DataLoader(train_dataset, shuffle=True, drop_last=True, batch_size=batch_size)
+        validation_dataloader = DataLoader(validation_dataset, drop_last=True, batch_size=batch_size)
         step = 0
         eval_step = 0
         state_dicts = {}
@@ -120,17 +121,20 @@ class CLIPTuner:
                         clip.model.convert_weights(self.model)
                     pbar.update(1)
 
+                    val_loss = []
                     if step % evaluation_steps == 0:
                         for batch in validation_dataloader:
                             pbar.set_description("Currently Validating")
                             with torch.no_grad():
                                 list_image, list_txt = batch
                                 total_loss = self.forward_pass(list_image, list_txt, **kwargs)
-                                self.experiment.log_metric("validation_loss", total_loss.item(), step=step)
+                                val_loss.append(total_loss.item())
+
+                        self.experiment.log_metric("validation_loss", np.mean(val_loss), step=step)
 
                         # store state_dict as cpu
                         state_dicts[eval_step] = {
-                            'validation_loss': total_loss.item(),
+                            'validation_loss': np.mean(val_loss),
                             'state_dict': {k: v.cpu() for k, v in self.model.state_dict().items()}
                         }
 
