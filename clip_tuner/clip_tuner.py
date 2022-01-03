@@ -141,10 +141,10 @@ class CLIPTuner:
                         eval_step+=1
                 pbar.close()
 
-        # just keep the best 3 due to OOM issues
+        # just keep the best 5 due to OOM issues
         steps_sorted_by_val_loss = sorted(state_dicts, key=lambda k: state_dicts[k]['validation_loss'])
         for k in steps_sorted_by_val_loss:
-            if k not in steps_sorted_by_val_loss[:3]:
+            if k not in steps_sorted_by_val_loss[:5]:
                 del state_dicts[k]
                 # ensure mem is freed
                 gc.collect()
