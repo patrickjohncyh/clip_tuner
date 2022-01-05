@@ -94,7 +94,7 @@ class CLIPTuner:
         train_dataset = ImageCaptioningDataset(train_dataframe, self.preprocess)
         validation_dataset = ImageCaptioningDataset(validation_dataframe, self.preprocess)
         train_dataloader = DataLoader(train_dataset, shuffle=True, drop_last=True, batch_size=batch_size)
-        validation_dataloader = DataLoader(validation_dataset, drop_last=True, batch_size=batch_size)
+        validation_dataloader = DataLoader(validation_dataset, shuffle=True, drop_last=True, batch_size=batch_size)
         step = 0
         eval_step = 0
         state_dicts = {}
