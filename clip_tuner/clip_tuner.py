@@ -10,12 +10,12 @@ from clip_tuner.dataset import ImageCaptioningDataset
 from torch.utils.data import DataLoader
 import gc
 import numpy as np
+import torch.distributed as dist
 
 def convert_models_to_fp32(model):
     for p in model.parameters():
         p.data = p.data.float()
         p.grad.data = p.grad.data.float()
-
 
 class CLIPTuner:
 
@@ -27,6 +27,7 @@ class CLIPTuner:
                  weight_decay=0.2,
                  temperature=1.0,
                  comet_tracking=None,
+                 multi_gpu:bool =False,
                  **kwargs):
 
         assert optimizer in ['adam', 'adamw', 'adabelief']
@@ -34,6 +35,7 @@ class CLIPTuner:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device,
                                                 jit=False)  # Must set jit=False for training
+        self.model = nn.DataParallel(self.model) if multi_gpu else self.model
         if comet_tracking:
             self.experiment = Experiment(comet_tracking)
         else:
@@ -83,6 +85,31 @@ class CLIPTuner:
         images = list_image
         images = images.to(self.device)
         texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False)).to(self.device)
+
+        image_features_batch = self.model.encode_image(images)
+        text_features_batch = self.model.encode_text(texts)
+
+        image_features_batch = image_features_batch / image_features_batch.norm(dim=1, keepdim=True)
+        text_features_batch = text_features_batch / text_features_batch.norm(dim=1, keepdim=True)
+
+        text_features_scaled_batch = self.model.logit_scale.exp() * text_features_batch
+
+        print('IMAGE FEATURE SHAPE BEFORE ALL GATHER: {}'.format(image_features_batch.shape))
+        print('TEXT FEATURE SHAPE BEFORE ALL GATHER: {}'.format(text_features_scaled_batch.shape))
+
+        image_features = dist.all_gather(image_features_batch)  # [global batch, C]
+        text_features = dist.all_gather(text_features_scaled_batch)  # [global batch, C]
+
+        print('IMAGE FEATURE SHAPE AFTER ALL GATHER: {}'.format(image_features.shape))
+        print('TEXT FEATURE SHAPE AFTER ALL GATHER: {}'.format(text_features.shape))
+
+
+        logits_per_image = image_features @ text_features.t()
+        logits_per_text = text_features @ image_features.t()
+
+        print('IMAGE LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_image.shape))
+        print('TEXT LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_text.shape))
+
 
         logits_per_image, logits_per_text = self.model(images, texts)
         ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
