@@ -98,8 +98,8 @@ class CLIPTuner:
 
     def forward_pass(self, list_image, list_txt, **kwargs):
         images = list_image
-        images = images.to(self.device)
-        texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False)).to(self.device)
+        # images = images.to(self.device)
+        texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False))#.to(self.device)
 
         image_features_batch, text_features_batch = self.model(images, texts)
         # text_features_batch = self.model.encode_text(texts)
