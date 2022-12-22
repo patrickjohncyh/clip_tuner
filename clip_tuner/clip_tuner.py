@@ -4,6 +4,7 @@ from torch import nn
 from torch import optim
 from torch_optimizer import AdaBelief
 import clip
+from clip.model import CLIP
 import tqdm
 import torch
 from clip_tuner.dataset import ImageCaptioningDataset
@@ -12,10 +13,22 @@ import gc
 import numpy as np
 import torch.distributed as dist
 
+
 def convert_models_to_fp32(model):
     for p in model.parameters():
         p.data = p.data.float()
         p.grad.data = p.grad.data.float()
+
+
+def distributed_forward(self, image, text):
+    image_features = self.encode_image(image)
+    text_features = self.encode_text(text)
+
+    # normalized features
+    image_features = image_features / image_features.norm(dim=1, keepdim=True)
+    text_features = text_features / text_features.norm(dim=1, keepdim=True)
+
+    return image_features, self.model.logit_scale.exp() * text_features
 
 class CLIPTuner:
 
@@ -35,7 +48,9 @@ class CLIPTuner:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device,
                                                 jit=False)  # Must set jit=False for training
-        self.model = nn.DataParallel(self.model) if multi_gpu else self.model
+
+        self.model.forward = distributed_forward.__get__(self.model, CLIP)
+        self.model = nn.parallel.DistributedDataParallel(self.model) if multi_gpu else self.model
         if comet_tracking:
             self.experiment = Experiment(comet_tracking)
         else:
@@ -86,19 +101,14 @@ class CLIPTuner:
         images = images.to(self.device)
         texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False)).to(self.device)
 
-        image_features_batch = self.model.encode_image(images)
-        text_features_batch = self.model.encode_text(texts)
-
-        image_features_batch = image_features_batch / image_features_batch.norm(dim=1, keepdim=True)
-        text_features_batch = text_features_batch / text_features_batch.norm(dim=1, keepdim=True)
-
-        text_features_scaled_batch = self.model.logit_scale.exp() * text_features_batch
+        image_features_batch, text_features_batch = self.model(images, texts)
+        # text_features_batch = self.model.encode_text(texts)
 
         print('IMAGE FEATURE SHAPE BEFORE ALL GATHER: {}'.format(image_features_batch.shape))
-        print('TEXT FEATURE SHAPE BEFORE ALL GATHER: {}'.format(text_features_scaled_batch.shape))
+        print('TEXT FEATURE SHAPE BEFORE ALL GATHER: {}'.format(text_features_batch.shape))
 
         image_features = dist.all_gather(image_features_batch)  # [global batch, C]
-        text_features = dist.all_gather(text_features_scaled_batch)  # [global batch, C]
+        text_features = dist.all_gather(text_features_batch)  # [global batch, C]
 
         print('IMAGE FEATURE SHAPE AFTER ALL GATHER: {}'.format(image_features.shape))
         print('TEXT FEATURE SHAPE AFTER ALL GATHER: {}'.format(text_features.shape))
