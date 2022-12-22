@@ -50,7 +50,7 @@ class CLIPTuner:
                                                 jit=False)  # Must set jit=False for training
 
         self.model.forward = distributed_forward.__get__(self.model, CLIP)
-        self.model = nn.parallel.DistributedDataParallel(self.model) if multi_gpu else self.model
+        self.model = nn.parallel.DataParallel(self.model) if multi_gpu else self.model
         if comet_tracking:
             self.experiment = Experiment(comet_tracking)
         else:
