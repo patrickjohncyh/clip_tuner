@@ -99,7 +99,7 @@ class CLIPTuner:
         images = list_image
         # images = images.to(self.device)
         texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False))#.to(self.device)
-
+        print('TEXT SHAPE:{}'.format(texts.shape))
         image_features_batch, text_features_batch = self.model(images, texts)
         # text_features_batch = self.model.encode_text(texts)
 
