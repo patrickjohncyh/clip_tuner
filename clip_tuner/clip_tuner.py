@@ -23,6 +23,8 @@ def convert_models_to_fp32(model):
 def distributed_forward(self, image, text):
     image_features = self.encode_image(image)
     text_features = self.encode_text(text)
+    print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
+    print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
 
     # normalized features
     image_features = image_features / image_features.norm(dim=1, keepdim=True)
@@ -99,32 +101,31 @@ class CLIPTuner:
         images = list_image
         # images = images.to(self.device)
         texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False))#.to(self.device)
-        print('TEXT SHAPE:{}'.format(texts.shape))
         image_features_batch, text_features_batch = self.model(images, texts)
         # text_features_batch = self.model.encode_text(texts)
 
         print('IMAGE FEATURE SHAPE BEFORE ALL GATHER: {}'.format(image_features_batch.shape))
         print('TEXT FEATURE SHAPE BEFORE ALL GATHER: {}'.format(text_features_batch.shape))
 
-        image_features = dist.all_gather(image_features_batch)  # [global batch, C]
-        text_features = dist.all_gather(text_features_batch)  # [global batch, C]
+        # image_features = dist.all_gather(image_features_batch)  # [global batch, C]
+        # text_features = dist.all_gather(text_features_batch)  # [global batch, C]
+        #
+        # print('IMAGE FEATURE SHAPE AFTER ALL GATHER: {}'.format(image_features.shape))
+        # print('TEXT FEATURE SHAPE AFTER ALL GATHER: {}'.format(text_features.shape))
 
-        print('IMAGE FEATURE SHAPE AFTER ALL GATHER: {}'.format(image_features.shape))
-        print('TEXT FEATURE SHAPE AFTER ALL GATHER: {}'.format(text_features.shape))
-
-
-        logits_per_image = image_features @ text_features.t()
-        logits_per_text = text_features @ image_features.t()
-
-        print('IMAGE LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_image.shape))
-        print('TEXT LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_text.shape))
-
-
-        logits_per_image, logits_per_text = self.model(images, texts)
-        ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
-        total_loss = (self.temperature * self.loss_img(logits_per_image, ground_truth) +
-                      self.temperature * self.loss_txt(logits_per_text, ground_truth)) / 2
-        return total_loss
+        #
+        # logits_per_image = image_features @ text_features.t()
+        # logits_per_text = text_features @ image_features.t()
+        #
+        # print('IMAGE LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_image.shape))
+        # print('TEXT LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_text.shape))
+        #
+        #
+        # logits_per_image, logits_per_text = self.model(images, texts)
+        # ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
+        # total_loss = (self.temperature * self.loss_img(logits_per_image, ground_truth) +
+        #               self.temperature * self.loss_txt(logits_per_text, ground_truth)) / 2
+        # return total_loss
 
     def tuner(self, train_dataframe, validation_dataframe, batch_size=4, epochs=5, evaluation_steps=500, **kwargs):
         train_dataset = ImageCaptioningDataset(train_dataframe, self.preprocess)
