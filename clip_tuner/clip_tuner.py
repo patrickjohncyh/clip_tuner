@@ -38,6 +38,24 @@ def distributed_forward(self, image, text):
 
     return image_features, self.logit_scale.exp() * text_features
 
+class CLIPDist(nn.Module):
+
+    def __init__(self, model: CLIP):
+        super(CLIPDist, self).__init__()
+        self.model = model
+
+    def forward(self, image, text):
+        image_features = self.model.encode_image(image)
+        text_features = self.model.encode_text(text)
+        print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
+        print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
+
+        # normalized features
+        image_features = image_features / image_features.norm(dim=1, keepdim=True)
+        text_features = text_features / text_features.norm(dim=1, keepdim=True)
+
+        return image_features, self.logit_scale.exp() * text_features
+
 class CLIPTuner:
 
     def __init__(self,
@@ -55,8 +73,9 @@ class CLIPTuner:
 
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
         self.model, self.preprocess = clip.load("ViT-B/32", jit=False)  # Must set jit=False for training
+        self.model = CLIPDist(self.model)
         # , device=self.device,
-        self.model.forward = distributed_forward.__get__(self.model, CLIP)
+        # self.model.forward = distributed_forward.__get__(self.model, CLIP)
         self.model = nn.parallel.DataParallel(self.model.cuda()) if multi_gpu else self.model
         if comet_tracking:
             self.experiment = Experiment(comet_tracking)
