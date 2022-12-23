@@ -21,6 +21,12 @@ def convert_models_to_fp32(model):
 
 
 def distributed_forward(self, image, text):
+    print("=== IN MODEL ===")
+    print(type(image))
+    print(type(text))
+    print(image.device)
+    print(text.device)
+    print("======")
     image_features = self.encode_image(image)
     text_features = self.encode_text(text)
     print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
