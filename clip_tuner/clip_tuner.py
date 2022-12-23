@@ -36,7 +36,7 @@ def distributed_forward(self, image, text):
     image_features = image_features / image_features.norm(dim=1, keepdim=True)
     text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
-    return image_features, self.logit_scale.exp() * text_features
+    return image_features, self.model.logit_scale.exp() * text_features
 
 class CLIPDist(nn.Module):
 
