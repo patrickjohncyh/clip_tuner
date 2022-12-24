@@ -126,31 +126,23 @@ class CLIPTuner:
         images = list_image
         # images = images.to(self.device)
         texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False))#.to(self.device)
-        image_features_batch, text_features_batch = self.model(images, texts)
-        # text_features_batch = self.model.encode_text(texts)
+        image_features, text_features_scaled = self.model(images, texts)
 
-        print('IMAGE FEATURE SHAPE BEFORE ALL GATHER: {}'.format(image_features_batch.shape))
-        print('TEXT FEATURE SHAPE BEFORE ALL GATHER: {}'.format(text_features_batch.shape))
+        print('IMAGE FEATURE SHAPE: {}'.format(image_features.shape))
+        print('TEXT FEATURE SHAPE: {}'.format(text_features_scaled.shape))
 
-        # image_features = dist.all_gather(image_features_batch)  # [global batch, C]
-        # text_features = dist.all_gather(text_features_batch)  # [global batch, C]
-        #
-        # print('IMAGE FEATURE SHAPE AFTER ALL GATHER: {}'.format(image_features.shape))
-        # print('TEXT FEATURE SHAPE AFTER ALL GATHER: {}'.format(text_features.shape))
+        logits_per_image = image_features @ text_features_scaled.t()
+        logits_per_text = text_features_scaled @ image_features.t()
 
-        #
-        # logits_per_image = image_features @ text_features.t()
-        # logits_per_text = text_features @ image_features.t()
-        #
-        # print('IMAGE LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_image.shape))
-        # print('TEXT LOGITS SHAPE AFTER ALL GATHER: {}'.format(logits_per_text.shape))
+        print('IMAGE LOGITS SHAPE: {}'.format(logits_per_image.shape))
+        print('TEXT LOGITS SHAPE: {}'.format(logits_per_text.shape))
         #
         #
         # logits_per_image, logits_per_text = self.model(images, texts)
-        # ground_truth = torch.arange(len(images), dtype=torch.long, device=self.device)
-        # total_loss = (self.temperature * self.loss_img(logits_per_image, ground_truth) +
-        #               self.temperature * self.loss_txt(logits_per_text, ground_truth)) / 2
-        # return total_loss
+        ground_truth = torch.arange(len(images), dtype=torch.long)#, device=self.device)
+        total_loss = (self.loss_img(logits_per_image, ground_truth) +
+                      self.loss_txt(logits_per_text, ground_truth)) / 2
+        return total_loss
 
     def tuner(self, train_dataframe, validation_dataframe, batch_size=4, epochs=5, evaluation_steps=500, **kwargs):
         train_dataset = ImageCaptioningDataset(train_dataframe, self.preprocess)
