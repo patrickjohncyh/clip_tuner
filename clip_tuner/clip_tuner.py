@@ -20,23 +20,23 @@ def convert_models_to_fp32(model):
         p.grad.data = p.grad.data.float()
 
 
-def distributed_forward(self, image, text):
-    print("=== IN MODEL ===")
-    print(type(image))
-    print(type(text))
-    print(image.device)
-    print(text.device)
-    print("======")
-    image_features = self.encode_image(image)
-    text_features = self.encode_text(text)
-    print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
-    print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
-
-    # normalized features
-    image_features = image_features / image_features.norm(dim=1, keepdim=True)
-    text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-    return image_features, self.model.logit_scale.exp() * text_features
+# def distributed_forward(self, image, text):
+#     print("=== IN MODEL ===")
+#     print(type(image))
+#     print(type(text))
+#     print(image.device)
+#     print(text.device)
+#     print("======")
+#     image_features = self.encode_image(image)
+#     text_features = self.encode_text(text)
+#     print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
+#     print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
+#
+#     # normalized features
+#     image_features = image_features / image_features.norm(dim=1, keepdim=True)
+#     text_features = text_features / text_features.norm(dim=1, keepdim=True)
+#
+#     return image_features, self.model.logit_scale.exp() * text_features
 
 class CLIPDist(nn.Module):
 
@@ -54,7 +54,7 @@ class CLIPDist(nn.Module):
         image_features = image_features / image_features.norm(dim=1, keepdim=True)
         text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
-        return image_features, self.logit_scale.exp() * text_features
+        return image_features, self.model.logit_scale.exp() * text_features
 
 class CLIPTuner:
 
