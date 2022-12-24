@@ -20,24 +20,6 @@ def convert_models_to_fp32(model):
         p.grad.data = p.grad.data.float()
 
 
-# def distributed_forward(self, image, text):
-#     print("=== IN MODEL ===")
-#     print(type(image))
-#     print(type(text))
-#     print(image.device)
-#     print(text.device)
-#     print("======")
-#     image_features = self.encode_image(image)
-#     text_features = self.encode_text(text)
-#     print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
-#     print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
-#
-#     # normalized features
-#     image_features = image_features / image_features.norm(dim=1, keepdim=True)
-#     text_features = text_features / text_features.norm(dim=1, keepdim=True)
-#
-#     return image_features, self.model.logit_scale.exp() * text_features
-
 class CLIPDist(nn.Module):
 
     def __init__(self, model: CLIP):
@@ -47,8 +29,8 @@ class CLIPDist(nn.Module):
     def forward(self, image, text):
         image_features = self.model.encode_image(image)
         text_features = self.model.encode_text(text)
-        print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
-        print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
+        # print('IN MODEL -- IMAGE FEAT SHAPE: {}'.format(image_features.shape))
+        # print('IN MODEL -- TEXT FEAT SHAPE: {}'.format(text_features.shape))
 
         # normalized features
         image_features = image_features / image_features.norm(dim=1, keepdim=True)
@@ -128,17 +110,15 @@ class CLIPTuner:
         texts = clip.tokenize(list_txt, truncate=kwargs.get('truncate', False))#.to(self.device)
         image_features, text_features_scaled = self.model(images, texts)
 
-        print('IMAGE FEATURE SHAPE: {}'.format(image_features.shape))
-        print('TEXT FEATURE SHAPE: {}'.format(text_features_scaled.shape))
+        # print('IMAGE FEATURE SHAPE: {}'.format(image_features.shape))
+        # print('TEXT FEATURE SHAPE: {}'.format(text_features_scaled.shape))
 
         logits_per_image = image_features @ text_features_scaled.t()
         logits_per_text = text_features_scaled @ image_features.t()
 
-        print('IMAGE LOGITS SHAPE: {}'.format(logits_per_image.shape))
-        print('TEXT LOGITS SHAPE: {}'.format(logits_per_text.shape))
-        #
-        #
-        # logits_per_image, logits_per_text = self.model(images, texts)
+        # print('IMAGE LOGITS SHAPE: {}'.format(logits_per_image.shape))
+        # print('TEXT LOGITS SHAPE: {}'.format(logits_per_text.shape))
+
         ground_truth = torch.arange(len(images), dtype=torch.long).cuda()# device=self.device)
         total_loss = (self.loss_img(logits_per_image, ground_truth) +
                       self.loss_txt(logits_per_text, ground_truth)) / 2
