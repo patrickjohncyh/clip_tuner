@@ -49,6 +49,7 @@ class CLIPTuner:
                  temperature=1.0,
                  comet_tracking=None,
                  multi_gpu:bool =False,
+                 frozen_vision=True,
                  **kwargs):
 
         assert optimizer in ['adam', 'adamw', 'adabelief']
@@ -85,8 +86,14 @@ class CLIPTuner:
         self.loss_txt = nn.CrossEntropyLoss()
 
 
+
+        print(self.model.model.visual.parameters.keys())
+
+
+
+
         if optimizer == 'adam':
-            self.optimizer = optim.Adam(self.model.parameters(),
+            self.optimizer = optim.Adam([_ for _ in self.model.parameters() if _.requires_grad == True],
                                         lr=hyper_params["lr"],
                                         betas=hyper_params["betas"],
                                         eps=hyper_params["eps"],
