@@ -16,8 +16,9 @@ import torch.distributed as dist
 
 def convert_models_to_fp32(model):
     for p in model.parameters():
-        p.data = p.data.float()
-        p.grad.data = p.grad.data.float()
+        if p.requires_grad:
+            p.data = p.data.float()
+            p.grad.data = p.grad.data.float()
 
 
 class CLIPDist(nn.Module):
