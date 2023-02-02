@@ -57,6 +57,7 @@ class CLIPTuner:
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
         self.model, self.preprocess = clip.load("ViT-B/32", jit=False)  # Must set jit=False for training
         self.model = CLIPDist(self.model)
+        print(self.model.model.visual.parameters.keys())
         # , device=self.device,
         # self.model.forward = distributed_forward.__get__(self.model, CLIP)
         self.model = nn.parallel.DataParallel(self.model.cuda()) if multi_gpu else self.model
@@ -87,7 +88,7 @@ class CLIPTuner:
 
 
 
-        print(self.model.model.visual.parameters.keys())
+
 
 
 
