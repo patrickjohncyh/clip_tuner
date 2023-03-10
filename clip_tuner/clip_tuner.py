@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 import gc
 import numpy as np
 import torch.distributed as dist
+import wget
 
 
 def convert_models_to_fp32(model):
@@ -51,12 +52,20 @@ class CLIPTuner:
                  comet_tracking=None,
                  multi_gpu:bool =False,
                  frozen_vision=True,
+                 from_pretrained=None,
                  **kwargs):
 
         assert optimizer in ['adam', 'adamw', 'adabelief']
 
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
         self.model, self.preprocess = clip.load("ViT-B/32", jit=False)  # Must set jit=False for training
+        if from_pretrained is not None:
+            print('DOWNLOADING WEIGHTS FROM {}'.format(from_pretrained))
+            filename = wget.download(from_pretrained)
+            print('FILENAME IS {}'.format(filename))
+            print('USING ALTERNATE PRE-TRAINED WEIGHTS')
+            self.model.load_state_dict(torch.load(filename))
+
         self.model = CLIPDist(self.model)
 
         if frozen_vision:
