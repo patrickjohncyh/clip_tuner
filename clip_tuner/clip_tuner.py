@@ -53,12 +53,13 @@ class CLIPTuner:
                  multi_gpu:bool =False,
                  frozen_vision=True,
                  from_pretrained=None,
+                 base_model="ViT-B/32",
                  **kwargs):
 
         assert optimizer in ['adam', 'adamw', 'adabelief']
 
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"  # If using GPU then use mixed precision training.
-        self.model, self.preprocess = clip.load("ViT-B/32", jit=False)  # Must set jit=False for training
+        self.model, self.preprocess = clip.load(base_model, jit=False)  # Must set jit=False for training
         if from_pretrained is not None:
             print('DOWNLOADING WEIGHTS FROM {}'.format(from_pretrained))
             filename = wget.download(from_pretrained)
